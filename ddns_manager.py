@@ -160,7 +160,7 @@ class NameSilo_APIv1:
             try:
                 ip_address = ipaddress.ip_address(value)
             except ValueError:
-                log.info('{} is not a valid IPv4/IPv6 address, type must be given'.format(value))
+                log.error('{} is not a valid IPv4/IPv6 address, type must be given'.format(value))
                 return
             if(ip_address.version == 4):
                 type = 'A'
@@ -191,6 +191,7 @@ class NameSilo_APIv1:
                 'rrttl': record_ttl,
             }
             try:
+                log.info('Updateing %s %s to %s', host['host'], type, value)
                 self._api_connection('dnsUpdateRecord', **__api_params)
             except ValueError:
                 log.exception('DDNS failed to update {}'.format(host['host']))
