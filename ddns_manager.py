@@ -5,6 +5,8 @@ import ipaddress
 
 import requests
 import logging
+from sendgrid import *
+from sendgrid.helpers.mail import *
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('DDNS')
@@ -53,11 +55,10 @@ domains_and_hosts = (
 record_ttl = "3600"
 
 # Outgoing Email Settings
-send_mail = False
-send_time = int(strftime('%I')) % 8 == 0  # Send an email at 8AM and 8PM.  Set to True to always send.
-email_from_address = "no-reply@freedom-mail.r-ben.com"
-email_from_name = "Freedom-Systems Admin"
-email_to_addresses = ["benrosner@gmail.com"]
+send_mail = True
+send_time = True
+email_from_address = "pi-no-reply@krizex.xyz"
+email_to_address = "krizex@gmail.com"
 subject = "DNS update notification, timestamped: " + strftime('%x %H:%M:%S')  # Subject line.
 
 #######################################################################################################################
@@ -192,6 +193,7 @@ class NameSilo_APIv1:
             }
             try:
                 log.info('Updateing %s %s to %s', host['host'], type, value)
+                _log.append('Updating %s %s to %s' % (host['host'], type, value))
                 self._api_connection('dnsUpdateRecord', **__api_params)
             except ValueError:
                 log.exception('DDNS failed to update {}'.format(host['host']))
@@ -282,35 +284,33 @@ class NameSilo_APIv1:
 #######################################################################################################################
 # In development, too tired.
 
+_log = []
+
 
 def update_records():
     log.info("DDNS operation started at {}".format(strftime('%x %H:%M:%S')))
     for domain, hosts in domains_and_hosts:
         NameSilo_APIv1(domain, hosts).dynamic_dns_update(_current_ip)
-    if send_mail and send_time:
+    if send_mail and send_time and _log:
         send_message()
 
 
 def build_message():
     """Builds an outgoing message."""
-    outgoing_mail = Mail()
-    outgoing_mail.from_email = Email(email_from_address, email_from_name)
-    outgoing_mail.subject = subject
-    personalization = Personalization()
-    for recipient in email_to_addresses:
-        personalization.add_to(Email(recipient))
-    outgoing_mail.add_personalization(personalization)
-    outgoing_mail.add_content(Content("text/plain", str.join('\n', _log)))
-    outgoing_mail.add_content(Content("text/html", "<html><body> {} </body></html>".format(str.join(' <br /> ', _log))))
-    return outgoing_mail.get()
+    message = Mail(
+        from_email=email_from_address,
+        to_emails=email_to_address,
+        subject=subject,
+        html_content='<strong>%s</strong>' % '\n'.join(_log))
+    return message
 
 
 def send_message():
     """Sends a built outgoing message."""
     # @todo validation & error handling.
-    sg = SendGridAPIClient(apikey=os.environ.get('SENDGRID_API_KEY'))
+    sg = SendGridAPIClient(os.environ.get('SENDGRID_API_KEY'))
     log.info("Message generated and sent at {}".format(strftime('%x %H:%M:%S')))
-    sg.client.mail.send.post(request_body=build_message())
+    sg.send(build_message())
 
 
 if __name__=="__main__":
