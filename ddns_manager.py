@@ -69,7 +69,7 @@ namesilo_api_key = os.environ.get('NAMESILO_API_KEY')
 NAMESILO_COM_API = 'https://www.namesilo.com/api'
 NAMESILO_API_IMPLEMENTED_OPERATIONS = {'dnsListRecords', 'dnsUpdateRecord', 'dnsAddRecord', 'dnsDeleteRecord'}
 
-_web_worker = requests.session()  # Requests session instance.
+_web_worker = requests
 
 
 class NameSilo_APIv1:
